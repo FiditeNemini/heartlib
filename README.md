@@ -143,6 +143,7 @@ After downloading, the `./ckpt` subfolder should structure like this:
 ./ckpt/
 ├── HeartCodec-oss/
 ├── HeartMuLa-oss-3B/
+├── config.json
 ├── gen_config.json
 └── tokenizer.json
 ```
