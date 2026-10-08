@@ -7,6 +7,7 @@ from unittest.mock import patch
 import torch
 from torch import nn
 from safetensors.torch import save_file
+from huggingface_hub.utils import LocalEntryNotFoundError
 from heartlib.heartcodec.modeling_heartcodec import HeartCodec
 
 
@@ -41,6 +42,27 @@ class SplitLoadingTest(unittest.TestCase):
         self.assertFalse(model.training)
         self.assertFalse(model.encoder.training)
         self.assertEqual(model.config.encoder_config['version'], 'vqv12')
+
+    def test_config_json_preferred(self):
+        (self.root / 'config.json').write_text(json.dumps({'version': 'from-config-json'}))
+        model = self.load({'encoder.weight': torch.ones(2)})
+        self.assertEqual(model.config.encoder_config['version'], 'from-config-json')
+
+    def test_hub_falls_back_to_encoder_config(self):
+        save_file({'encoder.weight': torch.ones(2)}, str(self.root / 'encoder.safetensors'))
+
+        def download(repo_id, filename, **kwargs):
+            if filename == 'config.json':
+                raise LocalEntryNotFoundError('missing')
+            return str(self.root / filename)
+
+        with patch.object(HeartCodec, 'from_pretrained', return_value=(self.model, {})), \
+             patch('heartlib.heartcodec.modeling_heartcodec.HeartCodecEncoder', FakeEncoder), \
+             patch('heartlib.heartcodec.modeling_heartcodec.hf_hub_download', side_effect=download) as hub:
+            model = HeartCodec.from_encoder_decoder_pretrained('decoder', 'org/encoder')
+        self.assertEqual(model.config.encoder_config['version'], 'vqv12')
+        self.assertEqual([c.args[1] for c in hub.call_args_list],
+                         ['config.json', 'encoder_config.json', 'encoder.safetensors'])
 
     def test_decoder_mismatch_rejected(self):
         with self.assertRaises(ValueError):

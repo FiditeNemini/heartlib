@@ -6,6 +6,7 @@ from pathlib import Path
 from copy import deepcopy
 
 from huggingface_hub import hf_hub_download
+from huggingface_hub.utils import EntryNotFoundError
 from safetensors.torch import load_file
 
 from .configuration_heartcodec import HeartCodecConfig
@@ -72,7 +73,13 @@ class HeartCodec(PreTrainedModel):
                 token=token, local_files_only=local_files_only,
             )
 
-        with open(resolve("encoder_config.json"), encoding="utf-8") as stream:
+        # Prefer config.json; checkpoints published before it was added only have
+        # encoder_config.json.
+        try:
+            config_path = resolve("config.json")
+        except (FileNotFoundError, EntryNotFoundError):
+            config_path = resolve("encoder_config.json")
+        with open(config_path, encoding="utf-8") as stream:
             encoder_config = json.load(stream)
         state = load_file(resolve("encoder.safetensors"), device="cpu")
         if not state or any(not key.startswith("encoder.") for key in state):

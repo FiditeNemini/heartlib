@@ -67,6 +67,7 @@ weights are strictly checked by the split-checkpoint loader.
 - `encoder.safetensors`: 1,006 encoder tensors, approximately 2.15 GB;
   original `encoder.*` names, shapes, dtypes and values are preserved.
 - `encoder_config.json`: feature extractor and query encoder configuration.
+- `config.json`: same content as `encoder_config.json`.
 - `SHA256SUMS`: weight-file SHA-256 checksum.
 - `LICENSE`: the source checkpoint's Apache-2.0 license.
 
